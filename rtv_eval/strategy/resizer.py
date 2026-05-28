@@ -18,11 +18,17 @@ def resize_frame(frame: np.ndarray, config: ResolutionConfig) -> np.ndarray:
     h, w = frame.shape[:2]
 
     if config.mode == "preset":
-        max_h = PRESETS[config.preset]
-        if h <= max_h:
-            return frame
-        scale = max_h / h
-        new_w, new_h = int(w * scale), max_h
+        target = PRESETS[config.preset]
+        if h > w:  # portrait: constrain by width
+            if w <= target:
+                return frame
+            scale = target / w
+            new_w, new_h = target, int(h * scale)
+        else:  # landscape: constrain by height
+            if h <= target:
+                return frame
+            scale = target / h
+            new_w, new_h = int(w * scale), target
     else:
         max_w, max_h = config.width, config.height
         scale = min(max_w / w, max_h / h)
