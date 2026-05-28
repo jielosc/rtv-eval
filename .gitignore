@@ -16,3 +16,10 @@ env/
 .ruff_cache/
 *.log
 .DS_Store
+
+# Results and databases
+results/
+*.db
+
+# Local config (may contain sensitive info)
+configs/local.yaml

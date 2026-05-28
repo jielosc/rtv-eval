@@ -15,23 +15,17 @@ benchmark:
 models:
   - name: "gpt-4o"
     base_url: "https://api.openai.com/v1"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "OPENAI_API_KEY"      # reads key from this env var
     model_name: "gpt-4o-2024-08-06"
     max_tokens: 256
     temperature: 0.0
     detail: "low"          # "low" saves tokens, "high" for better quality
 
-  # Uncomment and add more models as needed:
+  # Add more models:
   # - name: "qwen-vl-max"
   #   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   #   api_key_env: "DASHSCOPE_API_KEY"
   #   model_name: "qwen-vl-max"
-  #   max_tokens: 256
-
-  # - name: "internvl2"
-  #   base_url: "http://localhost:8000/v1"
-  #   api_key_env: "LOCAL_API_KEY"
-  #   model_name: "InternVL2-8B"
   #   max_tokens: 256
 
 strategies:
