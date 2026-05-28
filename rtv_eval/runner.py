@@ -39,7 +39,7 @@ class Runner:
     async def run(self) -> None:
         entries = self.benchmark.load(self.config.benchmark)
         video_root = Path(self.config.benchmark.video_root)
-        video_index = MotionBench.build_video_index(video_root)
+        video_index = self.benchmark.build_video_index(video_root)
 
         total_combos = len(self.config.models) * len(self.config.strategies)
         logger.info(
@@ -90,10 +90,7 @@ class Runner:
         semaphore = asyncio.Semaphore(self.config.concurrency)
 
         # Update run status back to running
-        self.db.conn.execute(
-            "UPDATE runs SET status='running' WHERE id=?", (run_id,)
-        )
-        self.db.conn.commit()
+        self.db.mark_run_running(run_id)
 
         pbar = tqdm(total=len(pending), desc=label)
 
@@ -116,7 +113,12 @@ class Runner:
                     response = await caller.call(entry.question, frames)
                     latency = (time.monotonic() - t0) * 1000
 
-                    extracted, correct = scorer.score(response, entry.answer or "")
+                    if entry.answer is not None:
+                        extracted, correct = scorer.score(response, entry.answer)
+                    else:
+                        # test split: no ground truth, only extract the predicted letter
+                        extracted = ExactMatchScorer._extract_letter(response)
+                        correct = None
 
                     self.db.save_result(
                         run_id=run_id,
@@ -126,7 +128,7 @@ class Runner:
                         raw_response=response,
                         extracted_answer=extracted,
                         ground_truth=entry.answer,
-                        is_correct=correct if entry.answer else None,
+                        is_correct=correct,
                         latency_ms=latency,
                         num_frames=len(frames),
                     )

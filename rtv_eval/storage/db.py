@@ -108,6 +108,12 @@ class Database:
         )
         self.conn.commit()
 
+    def mark_run_running(self, run_id: int) -> None:
+        self.conn.execute(
+            "UPDATE runs SET status='running' WHERE id=?", (run_id,)
+        )
+        self.conn.commit()
+
     def mark_run_completed(self, run_id: int) -> None:
         self.conn.execute(
             "UPDATE runs SET status='completed' WHERE id=?", (run_id,)

@@ -9,13 +9,14 @@ import numpy as np
 from PIL import Image
 
 from rtv_eval.config import StrategyConfig
+from rtv_eval.strategy.base import Strategy
 from rtv_eval.strategy.frame_sampler import sample_frames
 from rtv_eval.strategy.resizer import resize_frame
 
 logger = logging.getLogger(__name__)
 
 
-class VideoPreprocessor:
+class VideoPreprocessor(Strategy):
     def __init__(self, config: StrategyConfig):
         self.config = config
 

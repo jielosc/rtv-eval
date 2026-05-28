@@ -21,5 +21,8 @@ class Benchmark(ABC):
     @abstractmethod
     def load(self, config) -> list[QAEntry]: ...
 
+    @staticmethod
     @abstractmethod
-    def resolve_video_path(self, video_path: str) -> Path: ...
+    def build_video_index(video_root: Path) -> dict[str, Path]:
+        """Build a filename -> full path index for O(1) video lookup."""
+        ...

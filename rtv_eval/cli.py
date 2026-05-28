@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import sys
 from pathlib import Path
@@ -78,7 +79,7 @@ def report(db_path: str, fmt: str, output: str | None) -> None:
         export_table(db, runs, console)
     elif fmt == "json":
         data = export_json(db, runs)
-        text = __import__("json").dumps(data, indent=2, ensure_ascii=False)
+        text = json.dumps(data, indent=2, ensure_ascii=False)
         if output:
             Path(output).write_text(text)
             console.print(f"Written to {output}")

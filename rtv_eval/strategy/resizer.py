@@ -18,6 +18,10 @@ def resize_frame(frame: np.ndarray, config: ResolutionConfig) -> np.ndarray:
     h, w = frame.shape[:2]
 
     if config.mode == "preset":
+        if config.preset not in PRESETS:
+            raise ValueError(
+                f"Unknown preset '{config.preset}', valid choices: {list(PRESETS)}"
+            )
         target = PRESETS[config.preset]
         if h > w:  # portrait: constrain by width
             if w <= target:
@@ -30,6 +34,10 @@ def resize_frame(frame: np.ndarray, config: ResolutionConfig) -> np.ndarray:
             scale = target / h
             new_w, new_h = int(w * scale), target
     else:
+        if config.width is None or config.height is None:
+            raise ValueError(
+                "ResolutionConfig.mode='exact' requires both 'width' and 'height' to be set."
+            )
         max_w, max_h = config.width, config.height
         scale = min(max_w / w, max_h / h)
         if scale >= 1.0:

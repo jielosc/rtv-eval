@@ -48,11 +48,6 @@ class MotionBench(Benchmark):
         logger.info("Loaded %d entries from MotionBench (split=%s)", len(entries), config.split)
         return entries
 
-    def resolve_video_path(self, video_path: str) -> Path:
-        raise NotImplementedError(
-            "Use resolve_video_path_cached() with a pre-built index instead."
-        )
-
     @staticmethod
     def build_video_index(video_root: Path) -> dict[str, Path]:
         """Build filename -> full path index for O(1) lookup."""

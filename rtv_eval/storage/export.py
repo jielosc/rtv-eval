@@ -125,8 +125,9 @@ def export_csv(db: Database, runs: list[dict], output_path: Path) -> None:
     if not rows:
         return
 
-    fieldnames = list(rows[0].keys())
+    # Collect all field names across every row to handle differing question_type columns
+    all_keys: list[str] = list(dict.fromkeys(k for row in rows for k in row))
     with open(output_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=all_keys, restval="", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)

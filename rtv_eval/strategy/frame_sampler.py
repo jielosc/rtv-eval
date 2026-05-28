@@ -47,7 +47,6 @@ def _extract_at_indices(cap: cv2.VideoCapture, indices: list[int]) -> list[np.nd
     """Extract frames at specific indices using sequential scan."""
     frames: list[np.ndarray] = []
     idx_set = set(indices)
-    target_idx = 0
     frame_no = 0
 
     while cap.isOpened():
