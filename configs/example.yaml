@@ -1,0 +1,88 @@
+# RTV-Eval Experiment Configuration
+# Tests multiple models x multiple video preprocessing strategies on MotionBench
+
+name: "motionbench_baseline"
+concurrency: 5
+output_dir: "results"
+
+benchmark:
+  name: "motionbench"
+  type: "motionbench"
+  data_dir: "/Users/jielosc/Research/MotionBench/data"
+  video_root: "/Users/jielosc/Research/MotionBench/hf_download/MotionBench"
+  split: "dev"  # "dev" for local scoring, "test" for leaderboard submission
+
+models:
+  - name: "gpt-4o"
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+    model_name: "gpt-4o-2024-08-06"
+    max_tokens: 256
+    temperature: 0.0
+    detail: "low"          # "low" saves tokens, "high" for better quality
+
+  # Uncomment and add more models as needed:
+  # - name: "qwen-vl-max"
+  #   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  #   api_key_env: "DASHSCOPE_API_KEY"
+  #   model_name: "qwen-vl-max"
+  #   max_tokens: 256
+
+  # - name: "internvl2"
+  #   base_url: "http://localhost:8000/v1"
+  #   api_key_env: "LOCAL_API_KEY"
+  #   model_name: "InternVL2-8B"
+  #   max_tokens: 256
+
+strategies:
+  # Count-based sampling: fixed number of frames, evenly spaced
+  - name: "8frames_480p"
+    frame_sampling:
+      mode: "count"
+      count: 8
+    resolution:
+      mode: "preset"
+      preset: "480p"
+
+  - name: "16frames_480p"
+    frame_sampling:
+      mode: "count"
+      count: 16
+    resolution:
+      mode: "preset"
+      preset: "480p"
+
+  - name: "32frames_360p"
+    frame_sampling:
+      mode: "count"
+      count: 32
+    resolution:
+      mode: "preset"
+      preset: "360p"
+
+  # FPS-based sampling: simulates real-time streaming at a given frame rate
+  - name: "1fps_720p"
+    frame_sampling:
+      mode: "fps"
+      fps: 1.0
+    resolution:
+      mode: "preset"
+      preset: "720p"
+
+  - name: "2fps_480p"
+    frame_sampling:
+      mode: "fps"
+      fps: 2.0
+    resolution:
+      mode: "preset"
+      preset: "480p"
+
+  # Exact resolution control
+  # - name: "16frames_256x256"
+  #   frame_sampling:
+  #     mode: "count"
+  #     count: 16
+  #   resolution:
+  #     mode: "exact"
+  #     width: 256
+  #     height: 256
