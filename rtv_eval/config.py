@@ -44,6 +44,8 @@ class BenchmarkConfig(BaseModel):
     data_dir: str                   # path to metadata jsonl
     video_root: str                 # root dir to resolve video_path
     split: str = "dev"              # "dev" or "test"
+    min_duration: float | None = None   # seconds, inclusive
+    max_duration: float | None = None   # seconds, inclusive
 
 
 class ExperimentConfig(BaseModel):

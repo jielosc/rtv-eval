@@ -32,6 +32,15 @@ class MotionBench(Benchmark):
                 if config.split == "test" and qa["answer"] != "NA":
                     continue
 
+                # Filter by duration
+                video_info = item.get("video_info") or {}
+                duration = video_info.get("duration")
+                if duration is not None:
+                    if config.min_duration is not None and duration < config.min_duration:
+                        continue
+                    if config.max_duration is not None and duration > config.max_duration:
+                        continue
+
                 entries.append(QAEntry(
                     uid=qa["uid"],
                     video_path=item["video_path"],
