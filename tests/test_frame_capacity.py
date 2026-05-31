@@ -16,7 +16,7 @@ from PIL import Image
 
 # --- Config ---
 BASE_URL = "http://192.168.207.214:8000/v1"
-MODEL_NAME = "/data1/lrt/models/modelscope/Qwen2.5-VL-7B-Instruct"
+MODEL_NAME = "/data1/lrt/models/InternVL3-8B"
 API_KEY = "dummy"  # vLLM doesn't need a real key
 VIDEO_ROOT = Path("/Users/jielosc/Research/MotionBench/hf_download/MotionBench")
 META_PATH = Path("/Users/jielosc/Research/MotionBench/data/video_info.meta.jsonl")
@@ -27,25 +27,19 @@ TEST_GRID = [
     (4,  "360p", 360),
     (8,  "360p", 360),
     (16, "360p", 360),
-    (32, "360p", 360),
-    (48, "360p", 360),
-    (64, "360p", 360),
-    (96, "360p", 360),
+    (24, "360p", 360),
     (4,  "480p", 480),
     (8,  "480p", 480),
     (16, "480p", 480),
-    (32, "480p", 480),
-    (48, "480p", 480),
-    (64, "480p", 480),
+    (24, "480p", 480),
     (4,  "720p", 720),
     (8,  "720p", 720),
     (16, "720p", 720),
-    (32, "720p", 720),
-    (48, "720p", 720),
+    (24, "720p", 720),
     (4,  "1080p", 1080),
     (8,  "1080p", 1080),
     (16, "1080p", 1080),
-    (32, "1080p", 1080),
+    (24, "1080p", 1080),
 ]
 
 QUESTION = "What is happening in this video? Answer in one sentence."
