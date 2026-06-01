@@ -22,4 +22,5 @@ results/
 *.db
 
 # Local config (may contain sensitive info)
-configs/local.yaml
+configs/*
+!configs/example.yaml
