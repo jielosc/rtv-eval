@@ -1,11 +1,14 @@
 """
 Stress test: find the max frames the model can handle at various resolutions.
-Tests Qwen2.5-VL-7B via local vLLM endpoint.
+Reads video paths, model endpoint, and credentials from an experiment config YAML.
+Default: configs/local.yaml
 """
 import asyncio
 import base64
 import io
 import json
+import os
+import sys
 import time
 from pathlib import Path
 
@@ -14,32 +17,27 @@ import numpy as np
 import openai
 from PIL import Image
 
-# --- Config ---
-BASE_URL = "http://192.168.207.214:8000/v1"
-MODEL_NAME = "/data1/lrt/models/InternVL3-8B"
-API_KEY = "dummy"  # vLLM doesn't need a real key
-VIDEO_ROOT = Path("/Users/jielosc/Research/MotionBench/hf_download/MotionBench")
-META_PATH = Path("/Users/jielosc/Research/MotionBench/data/video_info.meta.jsonl")
+# Allow running from repo root even if rtv_eval is not installed
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from rtv_eval.config import load_config, ModelConfig
+
+# --- Load from experiment config ---
+CONFIG_PATH = Path(os.environ.get("RTV_EVAL_CONFIG", "configs/internvl3_only.yaml"))
+
+_cfg = load_config(CONFIG_PATH)
+_model: ModelConfig = _cfg.models[0]  # use the first model in the config
+
+BASE_URL = _model.base_url
+MODEL_NAME = _model.model_name
+API_KEY = os.environ.get(_model.api_key_env, "dummy")
+VIDEO_ROOT = Path(_cfg.benchmark.video_root)
+META_PATH = Path(_cfg.benchmark.data_dir) / "video_info.meta.jsonl"
 
 # Test grid: (frame_count, resolution_label, max_height)
 TEST_GRID = [
     # Frame counts to test
-    (4,  "360p", 360),
-    (8,  "360p", 360),
-    (16, "360p", 360),
-    (24, "360p", 360),
-    (4,  "480p", 480),
-    (8,  "480p", 480),
-    (16, "480p", 480),
     (24, "480p", 480),
-    (4,  "720p", 720),
-    (8,  "720p", 720),
-    (16, "720p", 720),
-    (24, "720p", 720),
-    (4,  "1080p", 1080),
-    (8,  "1080p", 1080),
-    (16, "1080p", 1080),
-    (24, "1080p", 1080),
 ]
 
 QUESTION = "What is happening in this video? Answer in one sentence."
