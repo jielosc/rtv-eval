@@ -6,6 +6,7 @@ import logging
 import time
 from pathlib import Path
 
+import openai
 from tqdm import tqdm
 
 from rtv_eval.benchmarks.base import Benchmark, QAEntry
@@ -93,9 +94,14 @@ class Runner:
         self.db.mark_run_running(run_id)
 
         pbar = tqdm(total=len(pending), desc=label)
+        fatal_connection_error = asyncio.Event()
 
         async def process_one(entry: QAEntry) -> None:
             async with semaphore:
+                if fatal_connection_error.is_set():
+                    pbar.update(1)
+                    return
+
                 video_path = video_index.get(entry.video_path)
                 if video_path is None:
                     logger.warning("Video not found: %s, skipping", entry.video_path)
@@ -132,6 +138,9 @@ class Runner:
                         latency_ms=latency,
                         num_frames=len(frames),
                     )
+                except openai.APIConnectionError:
+                    fatal_connection_error.set()
+                    logger.exception("Connection error processing %s", entry.uid)
                 except Exception:
                     logger.exception("Error processing %s", entry.uid)
                 finally:
@@ -141,6 +150,11 @@ class Runner:
         tasks = [asyncio.create_task(process_one(e)) for e in pending]
         await asyncio.gather(*tasks)
         pbar.close()
+
+        if fatal_connection_error.is_set():
+            self.db.mark_run_failed(run_id)
+            logger.error("[%s] Failed due to model connection error.", label)
+            return
 
         self.db.mark_run_completed(run_id)
         summary = self.db.get_accuracy_summary(run_id)
