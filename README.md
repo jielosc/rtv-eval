@@ -104,6 +104,8 @@ rtv-eval run <config.yaml> --dry-run    # Preview without running
 rtv-eval report <results.db>            # Print comparison table
 rtv-eval report <results.db> -f json    # Export as JSON
 rtv-eval report <results.db> -f csv -o out.csv  # Export as CSV
+rtv-eval export <results.db> --view summary      # Export run-level CSV for plotting
+rtv-eval export <results.db> --view results      # Export per-question CSV for plotting
 rtv-eval status <results.db>            # Show run status
 ```
 
@@ -117,6 +119,11 @@ Results are stored in SQLite (`results/<experiment>.db`). Each run tracks:
 - Summary: overall accuracy + per question-type breakdown (6 types in MotionBench)
 
 Interrupted runs resume automatically — completed entries are skipped on re-run.
+
+For visualization, use `rtv-eval export`:
+
+- `--view summary`: one row per run with accuracy, counts, average latency, average frame count
+- `--view results`: one row per question with correctness, latency, frame count, and raw model output
 
 ## Project Structure
 

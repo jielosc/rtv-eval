@@ -11,9 +11,16 @@ from rich.console import Console
 from rich.table import Table
 
 from rtv_eval.config import load_config
-from rtv_eval.runner import Runner
 from rtv_eval.storage.db import Database
-from rtv_eval.storage.export import export_csv, export_json, export_table
+from rtv_eval.storage.export import (
+    build_result_rows,
+    build_summary_rows,
+    export_csv,
+    export_json,
+    export_table,
+    write_rows_csv,
+    write_rows_json,
+)
 
 console = Console()
 
@@ -35,6 +42,8 @@ def cli(verbose: bool) -> None:
 @click.option("--dry-run", is_flag=True, help="Print experiment plan without running")
 def run(config_path: str, dry_run: bool) -> None:
     """Run an evaluation experiment from a YAML config."""
+    from rtv_eval.runner import Runner
+
     config = load_config(config_path)
 
     if dry_run:
@@ -98,6 +107,45 @@ def report(db_path: str, fmt: str, output: str | None) -> None:
 
 @cli.command()
 @click.argument("db_path", type=click.Path(exists=True))
+@click.option(
+    "--view",
+    type=click.Choice(["summary", "results"]),
+    default="summary",
+    show_default=True,
+    help="Choose aggregate run data or per-question long-form data.",
+)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    show_default=True,
+)
+@click.option("--output", "-o", type=click.Path(), default=None, help="Output file path")
+def export(db_path: str, view: str, fmt: str, output: str | None) -> None:
+    """Export visualization-friendly data from a results database."""
+    db = Database(Path(db_path))
+    runs = db.get_all_runs()
+
+    if not runs:
+        console.print("[yellow]No runs found in database.[/]")
+        db.close()
+        return
+
+    rows = build_summary_rows(db, runs) if view == "summary" else build_result_rows(db, runs)
+    output_path = Path(output) if output else Path(db_path).with_suffix(f".{view}.{fmt}")
+
+    if fmt == "json":
+        write_rows_json(rows, output_path)
+    else:
+        write_rows_csv(rows, output_path)
+
+    console.print(f"Written to {output_path}")
+    db.close()
+
+
+@cli.command()
+@click.argument("db_path", type=click.Path(exists=True))
 def status(db_path: str) -> None:
     """Show status of all runs in a results database."""
     db = Database(Path(db_path))
@@ -138,3 +186,7 @@ def status(db_path: str) -> None:
 
     console.print(table)
     db.close()
+
+
+if __name__ == "__main__":
+    cli()

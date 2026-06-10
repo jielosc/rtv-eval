@@ -155,6 +155,29 @@ class Database:
             for r in cur.fetchall()
         ]
 
+    def get_run_result_rows(self, run_id: int) -> list[dict]:
+        cur = self.conn.execute(
+            "SELECT qa_uid, question_type, video_path, raw_response, "
+            "extracted_answer, ground_truth, is_correct, latency_ms, "
+            "num_frames, created_at FROM results WHERE run_id=? ORDER BY id",
+            (run_id,),
+        )
+        return [
+            {
+                "qa_uid": r[0],
+                "question_type": r[1],
+                "video_path": r[2],
+                "raw_response": r[3],
+                "extracted_answer": r[4],
+                "ground_truth": r[5],
+                "is_correct": r[6],
+                "latency_ms": r[7],
+                "num_frames": r[8],
+                "created_at": r[9],
+            }
+            for r in cur.fetchall()
+        ]
+
     def get_accuracy_summary(self, run_id: int) -> dict:
         """Compute accuracy summary for a run (dev split only)."""
         results = self.get_run_results(run_id)
