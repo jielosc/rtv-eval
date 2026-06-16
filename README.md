@@ -86,6 +86,7 @@ The strategy layer simulates real-time video streaming constraints:
 |------|-------------|----------|
 | `count` | N evenly-spaced frames across the video | Consistent input size, good for short clips |
 | `fps` | Extract at a target frame rate | Simulates real streaming (e.g., 1fps, 2fps) |
+| `adaptive` | Content-adaptive fps + resolution per window | Simulates an on-device upload policy |
 
 Resolution presets scale proportionally (preserve aspect ratio):
 
@@ -95,6 +96,62 @@ Resolution presets scale proportionally (preserve aspect ratio):
 | 480p | 480px |
 | 720p | 720px |
 | 1080p | 1080px |
+
+### Adaptive strategy
+
+The `adaptive` strategy simulates an on-device upload policy. The camera decodes a
+cheap low-resolution analysis stream (default `224×126`, 8 fps). For each adjacent
+analysis-frame pair it computes a change score:
+
+```
+D = normalized frame difference          (mean abs pixel diff / 255, in [0,1])
+S = SSIM change = 1 - SSIM               (in [0,1])
+C = w_frame_diff · D̂ + w_ssim · Ŝ        (each metric robust-min-max normalized first)
+```
+
+**Default is pure frame difference (`w_ssim: 0.0`).** On 300 MotionBench videos
+(16802 frame-pairs), `D` and `S` rank windows almost identically (Spearman 0.97), so
+SSIM adds little tier-ordering signal while costing the most compute — it is skipped
+entirely when its weight is 0. The two metrics also have very different spreads
+(`std(S) ≈ 5.7 × std(D)`), so a naive `0.5·D + 0.5·S` is ~97% driven by `S`. To avoid
+that, when `w_ssim > 0` each metric is **robust-min-max normalized** to `[0,1]` using
+calibration bounds (`*_norm_lo/hi`, measured p5..p95) *before* weighting, and the sum is
+renormalized by total weight — so `C` stays in `[0,1]` and the weights are meaningful.
+
+The video is split into fixed windows (`window_seconds`); each window's mean `C` is
+mapped to the highest tier whose `min_score` it clears, and that window's frames are
+uploaded at the tier's `fps`, `resolution`, and JPEG `quality`. With the default bounds
+and thresholds, windows split roughly 48% / 27% / 25% across low / mid / high.
+
+Tiers are fully configurable — including the resolution/quality coupling direction — so
+you can run the default "high motion → low quality, high fps" policy or invert it. A
+config uses `adaptive` *instead of* `frame_sampling` + `resolution`:
+
+```yaml
+strategies:
+  - name: "adaptive_3tier"
+    adaptive:
+      analysis_width: 224
+      analysis_height: 126
+      analysis_fps: 8.0
+      window_seconds: 1.0
+      w_frame_diff: 1.0        # pure D by default
+      w_ssim: 0.0              # >0 to add SSIM (normalized via *_norm bounds below)
+      smoothing: 0.0           # EMA in [0,1) to damp tier flicker
+      d_norm_lo: 0.0013        # calibration bounds (300-video p5..p95)
+      d_norm_hi: 0.0904
+      s_norm_lo: 0.0040
+      s_norm_hi: 0.5890
+      tiers:                   # ordered low -> high change; first min_score = 0.0
+        - {name: low,  min_score: 0.0,  fps: 1.0, resolution: {mode: preset, preset: 720p}, quality: 90}
+        - {name: mid,  min_score: 0.15, fps: 2.0, resolution: {mode: preset, preset: 480p}, quality: 75}
+        - {name: high, min_score: 0.40, fps: 4.0, resolution: {mode: preset, preset: 360p}, quality: 60}
+```
+
+The decision is causal: a window's tier comes only from change observed up to that
+window, mirroring what a device could compute online. The calibration constants and
+thresholds above come from `tests/measure_change_metrics.py` (re-run it on your own
+data to recalibrate; `tests/plot_change_metrics.py` visualizes the distributions).
 
 ## CLI
 
