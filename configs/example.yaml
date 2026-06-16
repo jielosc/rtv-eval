@@ -71,6 +71,47 @@ strategies:
       mode: "preset"
       preset: "480p"
 
+  # Content-adaptive upload: an on-device-style policy that scores per-frame
+  # change on a low-res analysis stream, then uploads each 1s window at a tier
+  # chosen by its (normalized) change score C in [0,1].
+  #
+  # Default is pure frame-difference (w_ssim: 0.0): on 300 MotionBench videos,
+  # frame difference ranked windows at Spearman 0.97 vs the D+SSIM combo, so SSIM
+  # is redundant for tiering and is skipped to save on-device compute. To enable
+  # SSIM, set w_ssim > 0; each metric is then robust-min-max normalized with the
+  # *_norm_lo/hi bounds (measured p5..p95) before weighting, so weights are real.
+  - name: "adaptive_3tier"
+    adaptive:
+      analysis_width: 224       # low-res analysis stream (cheap to compute)
+      analysis_height: 126
+      analysis_fps: 8.0         # analyse 5-10 fps
+      window_seconds: 1.0       # tier decision granularity
+      w_frame_diff: 1.0         # weight on normalized frame difference D
+      w_ssim: 0.0               # 0 => pure D, SSIM not computed; >0 => add SSIM
+      smoothing: 0.0            # EMA in [0,1) to damp tier flicker; 0 disables
+      # Calibration bounds (p5..p95 from 300-video measurement); used to scale
+      # each metric to [0,1] before weighting. Defaults shown for transparency.
+      d_norm_lo: 0.0013
+      d_norm_hi: 0.0904
+      s_norm_lo: 0.0040
+      s_norm_hi: 0.5890
+      tiers:                    # ordered low -> high change; first min_score = 0.0
+        - name: "low"           # ~48% of windows
+          min_score: 0.0
+          fps: 1.0
+          resolution: {mode: "preset", preset: "720p"}
+          quality: 90
+        - name: "mid"           # ~27% of windows
+          min_score: 0.15
+          fps: 2.0
+          resolution: {mode: "preset", preset: "480p"}
+          quality: 75
+        - name: "high"          # ~25% of windows
+          min_score: 0.40
+          fps: 4.0
+          resolution: {mode: "preset", preset: "360p"}
+          quality: 60
+
   # Exact resolution control
   # - name: "16frames_256x256"
   #   frame_sampling:
