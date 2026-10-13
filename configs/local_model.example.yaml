@@ -1,0 +1,52 @@
+name: motionbench_local_mcq_v2
+concurrency: 1
+output_dir: results
+
+benchmark:
+  name: motionbench
+  type: motionbench
+  data_dir: /data1/lrt/MotionBench/data
+  video_root: /data1/lrt/MotionBench/videos/hf_raw/MotionBench
+  split: dev
+  max_duration: 6.0
+
+models:
+  - name: qwen3-vl-8b
+    backend: local
+    model_name: Qwen/Qwen3-VL-8B-Instruct
+    max_tokens: 16
+    temperature: 0.0
+    timeout: 120.0
+    local:
+      # Reuse the existing GPU environment; no separate service command is needed.
+      python_executable: /home/lrt/miniconda3/envs/qwen3vl/bin/python
+      device: cuda:0
+      dtype: bfloat16
+      cache_dir: /data1/lrt/local-model-serving
+      startup_timeout: 600
+
+strategies:
+  - name: 1fps_360p
+    frame_sampling: {mode: fps, fps: 1.0}
+    resolution: {mode: preset, preset: 360p}
+  - name: 1fps_480p
+    frame_sampling: {mode: fps, fps: 1.0}
+    resolution: {mode: preset, preset: 480p}
+  - name: 1fps_720p
+    frame_sampling: {mode: fps, fps: 1.0}
+    resolution: {mode: preset, preset: 720p}
+  - name: 2fps_360p
+    frame_sampling: {mode: fps, fps: 2.0}
+    resolution: {mode: preset, preset: 360p}
+  - name: 2fps_480p
+    frame_sampling: {mode: fps, fps: 2.0}
+    resolution: {mode: preset, preset: 480p}
+  - name: 2fps_720p
+    frame_sampling: {mode: fps, fps: 2.0}
+    resolution: {mode: preset, preset: 720p}
+  - name: 4fps_360p
+    frame_sampling: {mode: fps, fps: 4.0}
+    resolution: {mode: preset, preset: 360p}
+  - name: 4fps_480p
+    frame_sampling: {mode: fps, fps: 4.0}
+    resolution: {mode: preset, preset: 480p}

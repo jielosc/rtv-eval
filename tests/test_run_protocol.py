@@ -33,6 +33,7 @@ class RunProtocolTest(unittest.TestCase):
                     extracted_answer TEXT, ground_truth TEXT, is_correct INTEGER,
                     latency_ms REAL, num_frames INTEGER, created_at TEXT)''')
                 old.execute("INSERT INTO results (id, run_id, qa_uid, raw_response, extracted_answer) VALUES (1, 1, 'q1', 'a person', 'A')")
+            old.close()
             db = Database(path)
             try:
                 row = db.get_run_result_rows(1)[0]

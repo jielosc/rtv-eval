@@ -4,6 +4,7 @@ import logging
 import os
 
 import openai
+import httpx
 
 from rtv_eval.config import ModelConfig
 from rtv_eval.models.base import ModelCaller
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class OpenAICompatCaller(ModelCaller):
     def __init__(self, config: ModelConfig):
-        api_key = os.environ.get(config.api_key_env, "")
+        api_key = "local-evaluation" if config.backend == "local" else os.environ.get(config.api_key_env, "")
         if not api_key:
             raise ValueError(
                 f"API key env var '{config.api_key_env}' is not set or empty."
@@ -22,8 +23,14 @@ class OpenAICompatCaller(ModelCaller):
             base_url=config.base_url,
             api_key=api_key,
             timeout=config.timeout,
+            # A managed loopback server must never use the user's HTTP/SOCKS proxy.
+            http_client=httpx.AsyncClient(trust_env=False, timeout=config.timeout)
+            if config.backend == "local" else None,
         )
         self.config = config
+
+    async def close(self) -> None:
+        await self.client.close()
 
     async def call(self, question: str, frame_b64_list: list[str]) -> str:
         content: list[dict] = []

@@ -97,16 +97,36 @@ class StrategyConfig(BaseModel):
         return self
 
 
+class LocalServingConfig(BaseModel):
+    python_executable: str | None = None
+    device: str = "cuda:0"
+    dtype: Literal["bfloat16", "float16", "float32"] = "bfloat16"
+    attn_implementation: str = "sdpa"
+    cache_dir: str | None = None
+    startup_timeout: float = Field(default=600.0, gt=0)
+    shutdown_timeout: float = Field(default=15.0, gt=0)
+
+
 class ModelConfig(BaseModel):
     name: str
-    base_url: str
-    api_key_env: str                # env var name holding the API key
+    backend: Literal["openai", "local"] = "openai"
+    base_url: str | None = None
+    api_key_env: str = "OPENAI_API_KEY"  # unused for the temporary local server
+    local: LocalServingConfig = Field(default_factory=LocalServingConfig)
     model_name: str                 # model string sent to the API
     max_tokens: int = 256
     temperature: float = 0.0
     system_prompt: str | None = None
     timeout: float = 120.0
     detail: str = "low"             # image detail level: "low", "high", "auto"
+
+    @model_validator(mode="after")
+    def _check_backend(self) -> "ModelConfig":
+        if self.backend == "openai" and not self.base_url:
+            raise ValueError("OpenAI backend requires base_url")
+        if self.backend == "local" and self.base_url:
+            raise ValueError("Local backend allocates its own endpoint; omit base_url")
+        return self
 
 
 class BenchmarkConfig(BaseModel):

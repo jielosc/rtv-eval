@@ -50,6 +50,7 @@ def run(config_path: str, dry_run: bool) -> None:
         console.print(f"[bold]Experiment:[/] {config.name}")
         console.print(f"[bold]Benchmark:[/] {config.benchmark.name} (split={config.benchmark.split})")
         console.print(f"[bold]Models:[/] {[m.name for m in config.models]}")
+        console.print(f"[bold]Backends:[/] {[(m.name, m.backend) for m in config.models]}")
         console.print(f"[bold]Strategies:[/] {[s.name for s in config.strategies]}")
         console.print(f"[bold]Concurrency:[/] {config.concurrency}")
         combos = len(config.models) * len(config.strategies)
@@ -57,17 +58,18 @@ def run(config_path: str, dry_run: bool) -> None:
         return
 
     runner = Runner(config)
-    asyncio.run(runner.run())
-
-    # Print summary
-    console.print("\n[bold green]Done![/]")
-    for run_info in runner.db.get_all_runs():
-        if run_info["experiment_name"] == config.name:
-            summary = runner.db.get_accuracy_summary(run_info["id"])
-            console.print(
-                f"  {run_info['model_name']} x {run_info['strategy_name']}: "
-                f"{summary['accuracy']*100:.1f}% ({summary['correct']}/{summary['total']})"
-            )
+    try:
+        asyncio.run(runner.run())
+        console.print("\n[bold green]Done![/]")
+        for run_info in runner.db.get_all_runs():
+            if run_info["experiment_name"] == config.name:
+                summary = runner.db.get_accuracy_summary(run_info["id"])
+                console.print(
+                    f"  {run_info['model_name']} x {run_info['strategy_name']}: "
+                    f"{summary['accuracy']*100:.1f}% ({summary['correct']}/{summary['total']})"
+                )
+    finally:
+        runner.db.close()
 
 
 @cli.command()

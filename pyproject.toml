@@ -18,6 +18,17 @@ dependencies = [
 [project.scripts]
 rtv-eval = "rtv_eval.cli:cli"
 
+[project.optional-dependencies]
+local = [
+    "fastapi",
+    "uvicorn",
+    "torch",
+    "torchvision",
+    "transformers",
+    "accelerate",
+    "safetensors",
+]
+
 [tool.setuptools.packages.find]
 include = ["rtv_eval*"]
 
