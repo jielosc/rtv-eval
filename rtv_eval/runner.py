@@ -64,6 +64,8 @@ class Runner:
         video_index: dict[str, Path],
     ) -> None:
         config_snapshot = json.dumps({
+            # Changing prompt/scoring semantics must not resume legacy results.
+            "evaluation_protocol": "mcq-letter-v2",
             "model": model_cfg.model_dump(),
             "strategy": strategy_cfg.model_dump(),
             "benchmark": self.config.benchmark.model_dump(),
@@ -119,11 +121,16 @@ class Runner:
                     response = await caller.call(entry.question, frames)
                     latency = (time.monotonic() - t0) * 1000
 
+                    valid_options = entry.metadata.get("valid_options", ("A", "B", "C", "D"))
                     if entry.answer is not None:
-                        extracted, correct = scorer.score(response, entry.answer)
+                        extracted, correct = scorer.score(
+                            response, entry.answer, valid_options=valid_options,
+                        )
                     else:
                         # test split: no ground truth, only extract the predicted letter
-                        extracted = ExactMatchScorer._extract_letter(response)
+                        extracted = ExactMatchScorer._extract_letter(
+                            response, valid_options=valid_options,
+                        )
                         correct = None
 
                     self.db.save_result(
@@ -137,6 +144,7 @@ class Runner:
                         is_correct=correct,
                         latency_ms=latency,
                         num_frames=len(frames),
+                        answer_status="valid" if extracted else "invalid_format",
                     )
                 except openai.APIConnectionError:
                     fatal_connection_error.set()

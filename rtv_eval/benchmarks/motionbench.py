@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 from rtv_eval.benchmarks.base import Benchmark, QAEntry
@@ -41,16 +42,30 @@ class MotionBench(Benchmark):
                     if config.max_duration is not None and duration > config.max_duration:
                         continue
 
+                options = re.findall(r"(?m)^\s*([A-Z])\.\s+", qa["question"])
+                if not options or len(options) != len(set(options)) or any(o not in "ABCD" for o in options):
+                    raise ValueError(f"Missing, duplicate or unsupported options for question {qa['uid']}")
+                if qa["answer"] != "NA" and qa["answer"] not in options:
+                    raise ValueError(f"Answer is not a valid option for question {qa['uid']}")
+                option_list = ", ".join(options)
+                question = (
+                    "Answer the following single-choice question about the video frames.\n"
+                    f"Choose exactly one of these options: {option_list}.\n\n"
+                    f"{qa['question']}\n\n"
+                    f"Output exactly one uppercase letter ({option_list}) and nothing else. "
+                    "Do not describe the video, repeat the option text, or explain your answer."
+                )
                 entries.append(QAEntry(
                     uid=qa["uid"],
                     video_path=item["video_path"],
-                    question=qa["question"],
+                    question=question,
                     answer=qa["answer"] if qa["answer"] != "NA" else None,
                     metadata={
                         "question_type": item.get("question_type"),
                         "video_type": item.get("video_type"),
                         "video_info": item.get("video_info"),
                         "key": item.get("key"),
+                        "valid_options": options,
                     },
                 ))
 

@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS results (
     is_correct INTEGER,
     latency_ms REAL,
     num_frames INTEGER,
+    answer_status TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(run_id, qa_uid)
 );
@@ -46,6 +47,10 @@ class Database:
         self.conn = sqlite3.connect(str(db_path))
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(_SCHEMA)
+        columns = {row[1] for row in self.conn.execute("PRAGMA table_info(results)")}
+        if "answer_status" not in columns:
+            # Legacy rows remain NULL: their old extraction has not been validated.
+            self.conn.execute("ALTER TABLE results ADD COLUMN answer_status TEXT")
         self.conn.commit()
 
     def get_or_create_run(
@@ -58,12 +63,17 @@ class Database:
     ) -> int:
         """Get existing run ID or create a new one."""
         cur = self.conn.execute(
-            "SELECT id FROM runs WHERE experiment_name=? AND model_name=? "
+            "SELECT id, config_json FROM runs WHERE experiment_name=? AND model_name=? "
             "AND strategy_name=? AND benchmark_name=?",
             (experiment_name, model_name, strategy_name, benchmark_name),
         )
         row = cur.fetchone()
         if row:
+            if json.loads(row[1]) != json.loads(config_json):
+                raise ValueError(
+                    "Existing run uses a different configuration or evaluation protocol. "
+                    "Use a new experiment name/output database instead of mixing results."
+                )
             return row[0]
 
         cur = self.conn.execute(
@@ -93,17 +103,18 @@ class Database:
         is_correct: bool | None,
         latency_ms: float,
         num_frames: int,
+        answer_status: str | None = None,
     ) -> None:
         self.conn.execute(
             "INSERT OR REPLACE INTO results "
             "(run_id, qa_uid, question_type, video_path, raw_response, "
-            "extracted_answer, ground_truth, is_correct, latency_ms, num_frames) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "extracted_answer, ground_truth, is_correct, latency_ms, num_frames, answer_status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 run_id, qa_uid, question_type, video_path, raw_response,
                 extracted_answer, ground_truth,
                 1 if is_correct else (0 if is_correct is not None else None),
-                latency_ms, num_frames,
+                latency_ms, num_frames, answer_status,
             ),
         )
         self.conn.commit()
@@ -143,7 +154,7 @@ class Database:
     def get_run_results(self, run_id: int) -> list[dict]:
         cur = self.conn.execute(
             "SELECT qa_uid, question_type, extracted_answer, ground_truth, "
-            "is_correct, latency_ms, num_frames FROM results WHERE run_id=?",
+            "is_correct, latency_ms, num_frames, answer_status FROM results WHERE run_id=?",
             (run_id,),
         )
         return [
@@ -151,6 +162,7 @@ class Database:
                 "qa_uid": r[0], "question_type": r[1],
                 "extracted_answer": r[2], "ground_truth": r[3],
                 "is_correct": r[4], "latency_ms": r[5], "num_frames": r[6],
+                "answer_status": r[7],
             }
             for r in cur.fetchall()
         ]
@@ -159,7 +171,7 @@ class Database:
         cur = self.conn.execute(
             "SELECT qa_uid, question_type, video_path, raw_response, "
             "extracted_answer, ground_truth, is_correct, latency_ms, "
-            "num_frames, created_at FROM results WHERE run_id=? ORDER BY id",
+            "num_frames, created_at, answer_status FROM results WHERE run_id=? ORDER BY id",
             (run_id,),
         )
         return [
@@ -174,6 +186,7 @@ class Database:
                 "latency_ms": r[7],
                 "num_frames": r[8],
                 "created_at": r[9],
+                "answer_status": r[10],
             }
             for r in cur.fetchall()
         ]
