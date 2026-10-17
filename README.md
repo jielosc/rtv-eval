@@ -1,12 +1,29 @@
 # RTV-Eval
 
-Real-Time Video Understanding Evaluation Platform. Test different models with different video preprocessing strategies (frame rate × resolution) on video understanding benchmarks.
+![RTV-Eval: video understanding evaluation workflow](docs/overview.svg)
+
+[English](README.md) · [简体中文](README.zh-CN.md) · [Development](CONTRIBUTING.md)
+
+**How much video does a vision-language model need?** RTV-Eval compares models across frame sampling, resolution, and content-adaptive upload strategies on MotionBench. Run a model × strategy matrix from one YAML file, retain per-question evidence in SQLite, and export results for analysis.
+
+- **Controlled comparisons:** fixed frame count, target FPS, or adaptive tiers.
+- **Remote or local:** OpenAI-compatible vision APIs and managed local Qwen3-VL inference.
+- **Traceable results:** raw responses, strict answer validation, accuracy, API latency, and frame counts.
+- **Resumable evaluation:** retry missing entries without repeating recorded answers.
+
+RTV-Eval is an **offline evaluator for streaming-inspired preprocessing policies**. It does not measure live camera latency, network throughput, or end-to-end streaming performance.
 
 ## Install
 
 ```bash
-pip install -e .
+git clone https://github.com/jielosc/rtv-eval.git
+cd rtv-eval
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
+
+Requires Python 3.10+ and a video-capable OpenAI-compatible endpoint, or a local Qwen3-VL environment. Obtain MotionBench metadata and videos separately.
 
 ## Quick Start
 
@@ -18,12 +35,15 @@ cp configs/example.yaml configs/local.yaml
 # 2. Set API key
 export OPENAI_API_KEY="sk-..."
 
-# 3. Run
+# 3. Validate and preview the experiment matrix (no API requests)
+rtv-eval run configs/local.yaml --dry-run
+
+# 4. Run
 rtv-eval run configs/local.yaml
 
-# 4. View results
-rtv-eval report results/my_experiment.db
-rtv-eval status results/my_experiment.db
+# 5. View results
+rtv-eval report results/motionbench_baseline.db
+rtv-eval status results/motionbench_baseline.db
 ```
 
 ## Config
@@ -90,7 +110,7 @@ The strategy layer simulates real-time video streaming constraints:
 
 Resolution presets scale proportionally (preserve aspect ratio):
 
-| Preset | Max Height |
+| Preset | Max Short Side |
 |--------|------------|
 | 360p | 360px |
 | 480p | 480px |
@@ -148,8 +168,9 @@ strategies:
         - {name: high, min_score: 0.40, fps: 4.0, resolution: {mode: preset, preset: 360p}, quality: 60}
 ```
 
-The decision is causal: a window's tier comes only from change observed up to that
-window, mirroring what a device could compute online. The calibration constants and
+The implementation uses two decoding passes and scores the **whole current window**
+before selecting its upload frames. An online implementation would need to buffer
+that window; this is not a zero-lookahead per-frame policy. The calibration constants and
 thresholds above come from `tests/measure_change_metrics.py` (re-run it on your own
 data to recalibrate; `tests/plot_change_metrics.py` visualizes the distributions).
 
@@ -175,7 +196,9 @@ Results are stored in SQLite (`results/<experiment>.db`). Each run tracks:
 - Per-question: raw response, extracted answer, correctness, latency, frame count
 - Summary: overall accuracy + per question-type breakdown (6 types in MotionBench)
 
-Interrupted runs resume automatically — completed entries are skipped on re-run.
+Interrupted runs resume automatically — recorded entries are skipped on re-run, including invalid-format model answers (which count as incorrect on the dev split). Missing videos, empty decoding results, or request failures leave the run failed; the CLI exits nonzero and a rerun retries missing entries.
+
+Sampling semantics changed in protocol `mcq-letter-v3`. Use a new experiment name when upgrading from older runs; configuration/protocol mismatches are rejected to avoid mixing incompatible results. Latency records the model API call only, excluding decoding/preprocessing. Test-split answers have no ground truth; their accuracy is not meaningful.
 
 For visualization, use `rtv-eval export`:
 
@@ -195,3 +218,23 @@ rtv_eval/
 ├── scoring/            # Answer extraction + matching
 └── storage/            # SQLite DB + result export
 ```
+
+## Local Qwen3-VL
+
+Install `python -m pip install -e '.[local]'` in an environment with a compatible PyTorch/CUDA stack and a Transformers version supporting Qwen3-VL. Copy `configs/local_model.example.yaml`, update dataset/cache paths and model settings, and run it with the same CLI. The runner starts a temporary loopback API server, reuses it for that model's strategies, and stops it afterward. Model weights are downloaded on first use unless cached; hardware requirements depend on model size. Other local model families are not supported by the bundled service.
+
+## Dataset layout
+
+```text
+MotionBench/
+├── data/video_info.meta.jsonl    # benchmark.data_dir points to data/
+└── videos/                      # benchmark.video_root points here
+    ├── self-collected/*.mp4
+    └── public-dataset/*.mp4
+```
+
+The adapter resolves metadata video filenames against these two directories. The dev split has answer labels; the test split stores predictions only. Dataset downloads and API usage are separate from this repository.
+
+## Development & limitations
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and [the maintenance notes](docs/maintenance.md) for fixes and validation scope. No benchmark accuracy or speed improvement is claimed without running the actual dataset and models.

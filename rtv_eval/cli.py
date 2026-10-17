@@ -60,6 +60,9 @@ def run(config_path: str, dry_run: bool) -> None:
     runner = Runner(config)
     try:
         asyncio.run(runner.run())
+        failed = [r for r in runner.db.get_all_runs() if r["status"] == "failed"]
+        if failed:
+            raise click.ClickException("Evaluation incomplete; inspect logs and rerun to retry missing entries.")
         console.print("\n[bold green]Done![/]")
         for run_info in runner.db.get_all_runs():
             if run_info["experiment_name"] == config.name:
@@ -74,7 +77,7 @@ def run(config_path: str, dry_run: bool) -> None:
 
 @cli.command()
 @click.argument("db_path", type=click.Path(exists=True))
-@click.option("--format", "fmt", type=click.Choice(["table", "json", "csv"]), default="table")
+@click.option("--format", "-f", "fmt", type=click.Choice(["table", "json", "csv"]), default="table")
 @click.option("--output", "-o", type=click.Path(), default=None, help="Output file path")
 def report(db_path: str, fmt: str, output: str | None) -> None:
     """Generate comparison report from a results database."""

@@ -1,0 +1,4 @@
+include README.zh-CN.md CONTRIBUTING.md
+recursive-include docs *.md *.svg
+include configs/example.yaml configs/local_model.example.yaml
+include scripts/measure_frame_capacity.py

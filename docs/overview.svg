@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+<rect width="1200" height="360" rx="24" fill="#101b2d"/>
+<circle cx="1075" cy="80" r="160" fill="#162c45"/>
+<text x="64" y="66" fill="#62dfc4" font-family="sans-serif" font-size="16" letter-spacing="4">VIDEO UNDERSTANDING · EVALUATION TOOLKIT</text>
+<text x="60" y="145" fill="#f5f8fc" font-family="sans-serif" font-weight="700" font-size="68">RTV-Eval</text>
+<text x="64" y="191" fill="#b6c8de" font-family="sans-serif" font-size="24">Explore the trade-off between visual detail and model accuracy.</text>
+<g font-family="sans-serif" font-size="20" fill="#f5f8fc">
+<rect x="64" y="245" width="240" height="62" rx="12" fill="#223750"/><text x="91" y="284">MotionBench videos</text>
+<text x="321" y="284" fill="#62dfc4">→</text>
+<rect x="356" y="245" width="248" height="62" rx="12" fill="#223750"/><text x="383" y="284">Sampling × resolution</text>
+<text x="621" y="284" fill="#62dfc4">→</text>
+<rect x="656" y="245" width="208" height="62" rx="12" fill="#223750"/><text x="686" y="284">Vision models</text>
+<text x="881" y="284" fill="#62dfc4">→</text>
+<rect x="916" y="245" width="220" height="62" rx="12" fill="#223750"/><text x="944" y="284">Scores &amp; exports</text>
+</g></svg>
