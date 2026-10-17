@@ -44,4 +44,4 @@ def resize_frame(frame: np.ndarray, config: ResolutionConfig) -> np.ndarray:
             return frame
         new_w, new_h = int(w * scale), int(h * scale)
 
-    return cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    return cv2.resize(frame, (max(1, new_w), max(1, new_h)), interpolation=cv2.INTER_AREA)

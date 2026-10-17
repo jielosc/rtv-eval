@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rtv_eval.config import load_config, ModelConfig
 
 # --- Load from experiment config ---
-CONFIG_PATH = Path(os.environ.get("RTV_EVAL_CONFIG", "configs/internvl3_only.yaml"))
+CONFIG_PATH = Path(os.environ.get("RTV_EVAL_CONFIG", "configs/local.yaml"))
 
 _cfg = load_config(CONFIG_PATH)
 _model: ModelConfig = _cfg.models[0]  # use the first model in the config

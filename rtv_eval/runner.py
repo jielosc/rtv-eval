@@ -70,8 +70,8 @@ class Runner:
 
     def _get_run_id(self, model_cfg: ModelConfig, strategy_cfg: StrategyConfig) -> int:
         config_snapshot = json.dumps({
-            # Changing prompt/scoring semantics must not resume legacy results.
-            "evaluation_protocol": "mcq-letter-v2",
+            # Changing sampling or prompt/scoring semantics must not resume legacy results.
+            "evaluation_protocol": "mcq-letter-v3",
             "model": model_cfg.model_dump(),
             "strategy": strategy_cfg.model_dump(),
             "benchmark": self.config.benchmark.model_dump(),
@@ -130,7 +130,6 @@ class Runner:
                     frames = preprocessor.process(video_path)
                     if not frames:
                         logger.warning("No frames from %s, skipping", entry.video_path)
-                        pbar.update(1)
                         return
 
                     t0 = time.monotonic()
@@ -174,15 +173,22 @@ class Runner:
         tasks = [asyncio.create_task(process_one(e)) for e in pending]
         try:
             await asyncio.gather(*tasks)
+        except BaseException:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            self.db.mark_run_failed(run_id)
+            raise
         finally:
             pbar.close()
             close = getattr(caller, "close", None)
             if close is not None:
                 await close()
 
-        if fatal_connection_error.is_set():
+        missing = {entry.uid for entry in entries} - self.db.get_completed_uids(run_id)
+        if missing:
             self.db.mark_run_failed(run_id)
-            logger.error("[%s] Failed due to model connection error.", label)
+            logger.error("[%s] Incomplete: %d entries missing; rerun to retry.", label, len(missing))
             return
 
         self.db.mark_run_completed(run_id)

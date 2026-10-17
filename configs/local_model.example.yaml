@@ -5,8 +5,8 @@ output_dir: results
 benchmark:
   name: motionbench
   type: motionbench
-  data_dir: /data1/lrt/MotionBench/data
-  video_root: /data1/lrt/MotionBench/videos/hf_raw/MotionBench
+  data_dir: /path/to/MotionBench/data
+  video_root: /path/to/MotionBench/videos
   split: dev
   max_duration: 6.0
 
@@ -19,10 +19,10 @@ models:
     timeout: 120.0
     local:
       # Reuse the existing GPU environment; no separate service command is needed.
-      python_executable: /home/lrt/miniconda3/envs/qwen3vl/bin/python
+      # python_executable: /path/to/gpu-env/bin/python  # defaults to current Python
       device: cuda:0
       dtype: bfloat16
-      cache_dir: /data1/lrt/local-model-serving
+      cache_dir: /path/to/model-cache
       startup_timeout: 600
 
 strategies:
